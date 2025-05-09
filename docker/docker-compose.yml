@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   postgres:
@@ -26,34 +26,6 @@ services:
     restart: unless-stopped
     depends_on:
       - postgres
-    networks:
-      - chat-network
-      
-  backend:
-    build:
-      context: ../backend
-      dockerfile: Dockerfile
-    container_name: chat-app-backend
-    ports:
-      - "3000:3000"
-    volumes:
-      - ../backend:/app
-      - /app/node_modules
-    depends_on:
-      - postgres
-    networks:
-      - chat-network
-      
-  frontend:
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile
-    container_name: chat-app-frontend
-    ports:
-      - "3001:3000"
-    volumes:
-      - ../frontend:/app
-      - /app/node_modules
     networks:
       - chat-network
 
