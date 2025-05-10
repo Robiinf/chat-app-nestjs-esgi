@@ -1,0 +1,102 @@
+"use client";
+
+import React, { createContext, useState, useContext, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { AuthService } from "@/services/api";
+import { User, LoginCredentials, RegisterCredentials } from "@/types/auth";
+import Cookies from "js-cookie";
+
+interface AuthContextType {
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (credentials: LoginCredentials) => Promise<void>;
+  register: (credentials: RegisterCredentials) => Promise<void>;
+  logout: () => void;
+  error: string | null;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  const checkAuthStatus = async () => {
+    try {
+      setIsLoading(true);
+      if (AuthService.isAuthenticated()) {
+        const response = await AuthService.getProfile();
+        setUser(response.data);
+      }
+    } catch (error) {
+      console.error("Auth check failed:", error);
+      AuthService.logout();
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
+  const login = async (credentials: LoginCredentials) => {
+    try {
+      setError(null);
+      setIsLoading(true);
+      const response = await AuthService.login(credentials);
+      setUser(response.user);
+      router.push("/chat");
+    } catch (error: any) {
+      setError(error.response?.data?.message || "Login failed");
+      console.error("Login error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const register = async (credentials: RegisterCredentials) => {
+    try {
+      setError(null);
+      setIsLoading(true);
+      const response = await AuthService.register(credentials);
+      setUser(response.user);
+      router.push("/chat");
+    } catch (error: any) {
+      setError(error.response?.data?.message || "Registration failed");
+      console.error("Registration error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const logout = () => {
+    AuthService.logout();
+    setUser(null);
+    router.push("/login");
+  };
+
+  const value = {
+    user,
+    isAuthenticated: !!user,
+    isLoading,
+    login,
+    register,
+    logout,
+    error,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+}
