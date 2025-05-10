@@ -4,10 +4,10 @@ import React, { createContext, useState, useContext, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AuthService } from "@/services/api";
 import { User, LoginCredentials, RegisterCredentials } from "@/types/auth";
-import Cookies from "js-cookie";
 
 interface AuthContextType {
   user: User | null;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
@@ -16,7 +16,16 @@ interface AuthContextType {
   error: string | null;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  setUser: () => {},
+  isAuthenticated: false,
+  isLoading: false,
+  login: async () => {},
+  register: async () => {},
+  logout: () => {},
+  error: null,
+});
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -82,6 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = {
     user,
+    setUser,
     isAuthenticated: !!user,
     isLoading,
     login,

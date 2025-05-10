@@ -56,4 +56,10 @@ export const AuthService = {
   },
 };
 
+export const UserService = {
+  async updateProfile(profileData: { messageColor?: string }) {
+    return api.patch("/users/profile", profileData);
+  },
+};
+
 export default api;

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
@@ -45,5 +45,27 @@ export class UsersService {
 
   async updateMessageColor(userId: string, color: string): Promise<void> {
     await this.usersRepository.update(userId, { messageColor: color });
+  }
+
+  async updateProfile(
+    userId: string,
+    profileData: { messageColor?: string },
+  ): Promise<User> {
+    const user = await this.findById(userId);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (profileData.messageColor) {
+      await this.updateMessageColor(userId, profileData.messageColor);
+    }
+
+    const updatedUser = await this.findById(userId);
+    if (!updatedUser) {
+      throw new NotFoundException('User not found after update');
+    }
+
+    return updatedUser;
   }
 }

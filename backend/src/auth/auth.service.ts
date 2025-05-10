@@ -71,4 +71,12 @@ export class AuthService {
     // Retourner un token JWT pour une connexion automatique
     return this.login(newUser);
   }
+
+  async getProfile(userId: string) {
+    const user = await this.usersService.findById(userId);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    return user;
+  }
 }
