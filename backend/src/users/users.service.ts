@@ -43,6 +43,14 @@ export class UsersService {
     await this.usersRepository.update(userId, { isOnline });
   }
 
+  async getOnlineUsers(): Promise<Array<{ id: string; username: string }>> {
+    const users = await this.usersRepository.find({
+      where: { isOnline: true },
+      select: ['id', 'username'],
+    });
+    return users;
+  }
+
   async updateMessageColor(userId: string, color: string): Promise<void> {
     await this.usersRepository.update(userId, { messageColor: color });
   }

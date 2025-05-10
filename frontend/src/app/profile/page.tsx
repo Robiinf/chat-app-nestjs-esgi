@@ -20,7 +20,7 @@ export default function Profile() {
   }, [user]);
 
   // Safe color setter that ensures we never set undefined/null
-  const handleColorChange = (newColor) => {
+  const handleColorChange = (newColor: string): void => {
     // Ensure we always have a valid string value
     if (newColor && typeof newColor === "string") {
       setSelectedColor(newColor);
