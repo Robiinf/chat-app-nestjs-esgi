@@ -39,7 +39,6 @@ export class AuthController {
   @Get('profile')
   async getProfile(@Request() req) {
     const user = await this.authService.getProfile(req.user.userId);
-    console.log('User profile:', user);
     return user;
   }
 }

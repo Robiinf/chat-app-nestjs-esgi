@@ -59,6 +59,12 @@ export default function Chat() {
       <div className="w-64 bg-white dark:bg-gray-800 border-r dark:border-gray-700 flex flex-col">
         <div className="p-4 border-b dark:border-gray-700">
           <h2 className="font-bold text-lg dark:text-white">Chat Global</h2>
+          <Link
+            href="/messages"
+            className="text-sm text-indigo-600 hover:text-indigo-500"
+          >
+            Messages privés
+          </Link>
         </div>
 
         <div className="p-4 border-b dark:border-gray-700">
@@ -67,11 +73,24 @@ export default function Chat() {
           </h3>
           <ul>
             {onlineUsers.map((onlineUser) => (
-              <li key={onlineUser.id} className="flex items-center mb-2">
-                <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
-                <span className="text-gray-800 dark:text-gray-200">
-                  {onlineUser.username}
-                </span>
+              <li
+                key={onlineUser.id}
+                className="flex items-center justify-between mb-2"
+              >
+                <div className="flex items-center">
+                  <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
+                  <span className="text-gray-800 dark:text-gray-200">
+                    {onlineUser.username}
+                  </span>
+                </div>
+                {onlineUser.id !== user.id && (
+                  <Link
+                    href={`/messages?userId=${onlineUser.id}`}
+                    className="text-xs text-indigo-500 hover:underline"
+                  >
+                    Message
+                  </Link>
+                )}
               </li>
             ))}
           </ul>

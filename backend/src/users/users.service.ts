@@ -76,4 +76,14 @@ export class UsersService {
 
     return updatedUser;
   }
+
+  async findByPartialUsername(partialUsername: string): Promise<User[]> {
+    return this.usersRepository
+      .createQueryBuilder('user')
+      .where('LOWER(user.username) LIKE LOWER(:username)', {
+        username: `%${partialUsername}%`,
+      })
+      .take(10) // Limiter à 10 résultats
+      .getMany();
+  }
 }

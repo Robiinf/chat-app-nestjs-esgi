@@ -64,4 +64,116 @@ export class ChatService {
       },
     }));
   }
+
+  async getDirectMessages(userId1: string, userId2: string): Promise<any[]> {
+    const messages = await this.messageRepository.find({
+      where: [
+        {
+          type: 'direct',
+          user: { id: userId1 },
+          recipient: { id: userId2 },
+        },
+        {
+          type: 'direct',
+          user: { id: userId2 },
+          recipient: { id: userId1 },
+        },
+      ],
+      order: { createdAt: 'ASC' },
+      relations: ['user', 'recipient'],
+    });
+
+    return messages.map((message) => ({
+      id: message.id,
+      text: message.text,
+      createdAt: message.createdAt,
+      user: {
+        id: message.user.id,
+        username: message.user.username,
+        messageColor: message.user.messageColor || '#1e88e5',
+      },
+      recipientId: message.recipient?.id,
+    }));
+  }
+
+  async getUserConversations(userId: string): Promise<any[]> {
+    // Trouver tous les messages directs impliquant cet utilisateur
+    const sentMessages = await this.messageRepository.find({
+      where: { type: 'direct', user: { id: userId } },
+      relations: ['recipient'],
+    });
+
+    const receivedMessages = await this.messageRepository.find({
+      where: { type: 'direct', recipient: { id: userId } },
+      relations: ['user'],
+    });
+
+    // Extraire les IDs uniques des utilisateurs avec qui l'utilisateur a conversé
+    const userIds = new Set<string>();
+
+    sentMessages.forEach((msg) => {
+      if (msg.recipient) {
+        userIds.add(msg.recipient.id);
+      }
+    });
+    receivedMessages.forEach((msg) => userIds.add(msg.user.id));
+
+    // Récupérer les infos de ces utilisateurs
+    const conversations = await Promise.all(
+      Array.from(userIds).map(async (contactId) => {
+        const contact = await this.usersService.findById(contactId);
+        // Ajouter une vérification
+        if (!contact) {
+          return null; // Ou un objet par défaut si vous préférez
+        }
+
+        const latestMessage = await this.getLatestDirectMessage(
+          userId,
+          contactId,
+        );
+
+        return {
+          user: {
+            id: contact.id,
+            username: contact.username,
+            isOnline: contact.isOnline || false,
+          },
+          latestMessage: latestMessage
+            ? {
+                text: latestMessage.text,
+                createdAt: latestMessage.createdAt,
+                isFromUser: latestMessage.user.id === userId,
+              }
+            : null,
+        };
+      }),
+    );
+
+    // Et filtrer les conversations nulles
+    return conversations.filter(Boolean) as any[];
+  }
+
+  async getLatestDirectMessage(
+    userId1: string,
+    userId2: string,
+  ): Promise<Message | null> {
+    const message = await this.messageRepository.findOne({
+      where: [
+        {
+          type: 'direct',
+          user: { id: userId1 },
+          recipient: { id: userId2 },
+        },
+        {
+          type: 'direct',
+          user: { id: userId2 },
+          recipient: { id: userId1 },
+        },
+      ],
+      order: { createdAt: 'DESC' },
+      relations: ['user'],
+    });
+
+    return message;
+  }
 }

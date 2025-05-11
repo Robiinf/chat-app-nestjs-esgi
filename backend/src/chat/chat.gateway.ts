@@ -52,8 +52,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // Envoyer la liste des utilisateurs en ligne au client qui vient de se connecter
       const onlineUsers = await this.usersService.getOnlineUsers();
       client.emit('onlineUsers', onlineUsers);
-
-      console.log(`Client connected: ${user.username}`);
     } catch (error) {
       console.error('Connection error:', error);
       client.disconnect();
@@ -69,8 +67,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // Informer tous les clients qu'un utilisateur est déconnecté
       this.server.emit('userStatus', { userId, status: 'offline' });
-
-      console.log(`Client disconnected: ${client.data.user.username}`);
     }
   }
 
@@ -107,5 +103,156 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleGetHistory(@ConnectedSocket() client: Socket) {
     const messages = await this.chatService.getGlobalMessages();
     client.emit('messageHistory', messages);
+  }
+
+  @SubscribeMessage('directMessage')
+  async handleDirectMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { text: string; recipientId: string },
+  ) {
+    const sender = client.data.user;
+
+    if (!sender) return;
+
+    // Vérifier si le destinataire existe
+    const recipient = await this.usersService.findById(payload.recipientId);
+    if (!recipient) {
+      client.emit('error', { message: 'Destinataire non trouvé' });
+      return;
+    }
+
+    // Sauvegarder le message dans la base de données
+    const message = await this.chatService.saveMessage({
+      text: payload.text,
+      userId: sender.id,
+      type: 'direct',
+      recipientId: payload.recipientId,
+    });
+
+    const messageData = {
+      id: message.id,
+      text: message.text,
+      createdAt: message.createdAt,
+      user: {
+        id: sender.id,
+        username: sender.username,
+        messageColor: sender.messageColor || '#1e88e5',
+      },
+      recipientId: payload.recipientId,
+    };
+
+    // Émettre le message uniquement à l'expéditeur et au destinataire
+    const recipientSocket = this.findSocketByUserId(payload.recipientId);
+    if (recipientSocket) {
+      recipientSocket.emit('directMessage', messageData);
+    }
+
+    // Également envoyer au client expéditeur
+    client.emit('directMessage', messageData);
+  }
+
+  @SubscribeMessage('getDirectMessages')
+  async handleGetDirectMessages(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { userId: string },
+  ) {
+    if (!client.data.user) return;
+
+    const messages = await this.chatService.getDirectMessages(
+      client.data.user.id,
+      payload.userId,
+    );
+
+    client.emit('directMessageHistory', {
+      userId: payload.userId,
+      messages,
+    });
+  }
+
+  // Ajouter cette méthode utilitaire pour trouver un socket par ID utilisateur
+  private findSocketByUserId(userId: string): Socket | undefined {
+    const connectedSockets = this.server.sockets.sockets;
+    const sockets = Array.from(connectedSockets.values());
+
+    return sockets.find((socket) => socket.data?.user?.id === userId);
+  }
+
+  @SubscribeMessage('getConversations')
+  async handleGetConversations(@ConnectedSocket() client: Socket) {
+    if (!client.data.user) return;
+
+    const conversations = await this.chatService.getUserConversations(
+      client.data.user.id,
+    );
+    client.emit('conversations', conversations);
+  }
+
+  @SubscribeMessage('searchUsers')
+  async handleSearchUsers(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { username: string },
+  ) {
+    if (!client.data.user) return;
+
+    // Rechercher les utilisateurs correspondant au username partiel
+    const users = await this.usersService.findByPartialUsername(
+      payload.username,
+    );
+
+    // Ne pas inclure l'utilisateur actuel dans les résultats
+    const filteredUsers = users.filter(
+      (user) => user.id !== client.data.user.id,
+    );
+
+    // Transformer les données pour n'envoyer que ce qui est nécessaire
+    const results = filteredUsers.map((user) => ({
+      id: user.id,
+      username: user.username,
+      isOnline: user.isOnline || false,
+    }));
+
+    client.emit('searchResults', results);
+  }
+
+  @SubscribeMessage('startConversation')
+  async handleStartConversation(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { recipientId: string },
+  ) {
+    console.log(`Démarrage d'une conversation avec ${payload.recipientId}`);
+
+    if (!client.data.user) {
+      console.log('Utilisateur non authentifié');
+      return;
+    }
+
+    // Vérifier si l'utilisateur existe
+    const recipient = await this.usersService.findById(payload.recipientId);
+    if (!recipient) {
+      console.log('Destinataire non trouvé');
+      client.emit('error', { message: 'Utilisateur non trouvé' });
+      return;
+    }
+
+    // Créer un message système (invisible) pour démarrer la conversation dans la BDD
+    const systemMessage = await this.chatService.saveMessage({
+      text: `Conversation démarrée`,
+      userId: client.data.user.id,
+      type: 'direct',
+      recipientId: payload.recipientId,
+    });
+
+    // Informer l'utilisateur qu'une nouvelle conversation a été créée
+    client.emit('conversationStarted', {
+      userId: payload.recipientId,
+      username: recipient.username,
+      isOnline: recipient.isOnline || false,
+    });
+
+    // Mettre à jour les conversations
+    const conversations = await this.chatService.getUserConversations(
+      client.data.user.id,
+    );
+    client.emit('conversations', conversations);
   }
 }
