@@ -174,6 +174,19 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
       // Si besoin, ajouter un traitement spécifique ici
     });
 
+    // Ajouter dans les event listeners du useEffect
+    socketInstance.on("newConversation", (conversation) => {
+      setConversations((prev) => {
+        // Vérifier si cette conversation existe déjà
+        const exists = prev.some((c) => c.user.id === conversation.user.id);
+        if (exists) {
+          return prev;
+        } else {
+          return [...prev, conversation];
+        }
+      });
+    });
+
     // Demander les conversations au chargement
     socketInstance.emit("getConversations");
 
@@ -184,6 +197,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
       socketInstance.off("directMessageHistory");
       socketInstance.off("conversations");
       socketInstance.off("searchResults");
+      socketInstance.off("newConversation");
       socketInstance.disconnect();
     };
   }, [isAuthenticated, user]);
@@ -205,26 +219,17 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
       setActiveConversation(userId);
 
       if (socket && isConnected) {
-        // Vérifier si l'utilisateur existe déjà dans les conversations
-        const existingConversation = conversations.find(
-          (c) => c.user.id === userId
-        );
+        // Toujours émettre startConversation pour s'assurer que le backend renvoie
+        // l'événement newConversation
+        console.log("Émission de startConversation");
+        socket.emit("startConversation", { recipientId: userId });
 
-        if (!existingConversation) {
-          console.log("Nouvelle conversation, émission de startConversation");
-          // Émettre un événement spécial pour démarrer une nouvelle conversation
-          socket.emit("startConversation", { recipientId: userId });
-        }
-
-        // Puis demander les messages directs
+        // Demander les messages directs
         console.log("Demande des messages directs");
         socket.emit("getDirectMessages", { userId });
-
-        // Rafraîchir les conversations
-        socket.emit("getConversations");
       }
     },
-    [socket, isConnected, conversations]
+    [socket, isConnected]
   );
 
   const sendDirectMessage = useCallback(

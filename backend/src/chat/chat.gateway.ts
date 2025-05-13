@@ -234,25 +234,21 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    // Créer un message système (invisible) pour démarrer la conversation dans la BDD
-    const systemMessage = await this.chatService.saveMessage({
-      text: `Conversation démarrée`,
-      userId: client.data.user.id,
-      type: 'direct',
-      recipientId: payload.recipientId,
+    // Émettre l'événement newConversation avec les bonnes données
+    client.emit('newConversation', {
+      user: {
+        id: recipient.id,
+        username: recipient.username,
+        isOnline: recipient.isOnline || false,
+      },
+      latestMessage: null,
     });
 
-    // Informer l'utilisateur qu'une nouvelle conversation a été créée
+    // Informer l'utilisateur que la conversation est prête
     client.emit('conversationStarted', {
       userId: payload.recipientId,
       username: recipient.username,
       isOnline: recipient.isOnline || false,
     });
-
-    // Mettre à jour les conversations
-    const conversations = await this.chatService.getUserConversations(
-      client.data.user.id,
-    );
-    client.emit('conversations', conversations);
   }
 }
