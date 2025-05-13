@@ -7,7 +7,6 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../users/user.entity';
-import { Room } from './room.entity';
 
 @Entity()
 export class Message {
@@ -18,13 +17,10 @@ export class Message {
   text: string;
 
   @Column({ default: 'global' })
-  type: string; // 'global', 'room', 'private'
+  type: string; // 'global', 'private'
 
   @ManyToOne(() => User, (user) => user.messages, { onDelete: 'CASCADE' })
   user: User;
-
-  @ManyToOne(() => Room, (room) => room.messages, { nullable: true })
-  room: Room | null;
 
   @ManyToOne(() => User, { nullable: true })
   recipient: User | null;

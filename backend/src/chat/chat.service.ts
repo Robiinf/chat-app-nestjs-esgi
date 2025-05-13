@@ -29,14 +29,12 @@ export class ChatService {
     text: string;
     userId: string;
     type: string;
-    roomId?: string;
     recipientId?: string;
   }): Promise<Message> {
     const message = this.messageRepository.create({
       text: messageData.text,
       user: { id: messageData.userId },
       type: messageData.type,
-      room: messageData.roomId ? { id: messageData.roomId } : null,
       recipient: messageData.recipientId
         ? { id: messageData.recipientId }
         : null,
