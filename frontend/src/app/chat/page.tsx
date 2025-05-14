@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useChat } from "@/context/ChatContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { formatTime, formatMessageDate, isSameDay } from "@/utils/dateUtils";
 
 export default function Chat() {
   const { user, isLoading, isAuthenticated, logout } = useAuth();
@@ -52,11 +53,72 @@ export default function Chat() {
   }
 
   const formatDate = (dateStr: string | Date) => {
-    const date = new Date(dateStr);
-    return new Intl.DateTimeFormat("default", {
-      hour: "numeric",
-      minute: "numeric",
-    }).format(date);
+    return formatTime(dateStr);
+  };
+
+  const renderMessagesWithDateSeparators = () => {
+    if (messages.length === 0) {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <p className="text-gray-500 dark:text-gray-400">
+            Aucun message. Soyez le premier à écrire!
+          </p>
+        </div>
+      );
+    }
+
+    let result = [];
+    let lastDate = null;
+
+    for (let i = 0; i < messages.length; i++) {
+      const message = messages[i];
+      const messageDate = new Date(message.createdAt);
+
+      // Vérifier si nous avons besoin d'ajouter un séparateur de date
+      if (!lastDate || !isSameDay(lastDate, messageDate)) {
+        result.push(
+          <div key={`date-${i}`} className="flex justify-center my-4">
+            <div className="bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full text-sm text-gray-600 dark:text-gray-300">
+              {formatMessageDate(messageDate)}
+            </div>
+          </div>
+        );
+        lastDate = messageDate;
+      }
+
+      // Ajouter le message
+      result.push(
+        <div
+          key={message.id}
+          className={`flex ${
+            message.user.id === user.id ? "justify-end" : "justify-start"
+          }`}
+        >
+          <div
+            className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+              message.user.id === user.id
+                ? "bg-indigo-500 text-white"
+                : "bg-white dark:bg-gray-700 dark:text-white"
+            }`}
+          >
+            {message.user.id !== user.id && (
+              <div
+                className="font-bold mb-1"
+                style={{ color: message.user.messageColor }}
+              >
+                {message.user.username}
+              </div>
+            )}
+            <div>{message.text}</div>
+            <div className="text-xs opacity-70 text-right mt-1">
+              {formatDate(message.createdAt)}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return result;
   };
 
   return (
@@ -129,46 +191,9 @@ export default function Chat() {
       <div className="flex-1 flex flex-col">
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {messages.length === 0 ? (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-gray-500 dark:text-gray-400">
-                Aucun message. Soyez le premier à écrire!
-              </p>
-            </div>
-          ) : (
-            messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${
-                  message.user.id === user.id ? "justify-end" : "justify-start"
-                }`}
-              >
-                <div
-                  className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                    message.user.id === user.id
-                      ? "bg-indigo-500 text-white"
-                      : "bg-white dark:bg-gray-700 dark:text-white"
-                  }`}
-                >
-                  {message.user.id !== user.id && (
-                    <div
-                      className="font-bold mb-1"
-                      style={{ color: message.user.messageColor }}
-                    >
-                      {message.user.username}
-                    </div>
-                  )}
-                  <div>{message.text}</div>
-                  <div className="text-xs opacity-70 text-right mt-1">
-                    {formatDate(message.createdAt)}
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
+          {renderMessagesWithDateSeparators()}
           <div ref={messagesEndRef} />
         </div>
-
         {/* Input */}
         <div className="p-4 border-t dark:border-gray-700">
           <form onSubmit={handleSubmit} className="flex">
