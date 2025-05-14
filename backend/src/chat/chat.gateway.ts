@@ -251,4 +251,43 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       isOnline: recipient.isOnline || false,
     });
   }
+
+  @SubscribeMessage('typing')
+  async handleTyping(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { recipientId: string; isTyping: boolean },
+  ) {
+    if (!client.data.user) return;
+
+    const sender = client.data.user;
+    const recipientSocket = this.findSocketByUserId(payload.recipientId);
+
+    if (recipientSocket) {
+      recipientSocket.emit('userTyping', {
+        userId: sender.id,
+        username: sender.username,
+        isTyping: payload.isTyping,
+      });
+    }
+  }
+
+  @SubscribeMessage('messageRead')
+  async handleMessageRead(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { messageIds: string[]; senderId: string },
+  ) {
+    if (!client.data.user) return;
+
+    // Optionnellement mettre à jour les messages comme lus dans la base de données
+    await this.chatService.markMessagesAsRead(payload.messageIds);
+
+    // Notifier l'expéditeur original que ses messages ont été lus
+    const senderSocket = this.findSocketByUserId(payload.senderId);
+    if (senderSocket) {
+      senderSocket.emit('messagesRead', {
+        messageIds: payload.messageIds,
+        readerId: client.data.user.id,
+      });
+    }
+  }
 }

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Message } from './entities/message.entity';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
@@ -63,18 +63,18 @@ export class ChatService {
     }));
   }
 
-  async getDirectMessages(userId1: string, userId2: string): Promise<any[]> {
+  async getDirectMessages(userId: string, otherUserId: string): Promise<any[]> {
     const messages = await this.messageRepository.find({
       where: [
         {
           type: 'direct',
-          user: { id: userId1 },
-          recipient: { id: userId2 },
+          user: { id: userId },
+          recipient: { id: otherUserId },
         },
         {
           type: 'direct',
-          user: { id: userId2 },
-          recipient: { id: userId1 },
+          user: { id: otherUserId },
+          recipient: { id: userId },
         },
       ],
       order: { createdAt: 'ASC' },
@@ -85,12 +85,19 @@ export class ChatService {
       id: message.id,
       text: message.text,
       createdAt: message.createdAt,
+      isRead: message.isRead || false,
+      readAt: message.readAt,
       user: {
         id: message.user.id,
         username: message.user.username,
         messageColor: message.user.messageColor || '#1e88e5',
       },
-      recipientId: message.recipient?.id,
+      recipientId:
+        message.type === 'direct'
+          ? message.user.id === userId
+            ? message.recipient?.id
+            : message.user.id
+          : null,
     }));
   }
 
@@ -173,5 +180,12 @@ export class ChatService {
     });
 
     return message;
+  }
+
+  async markMessagesAsRead(messageIds: string[]): Promise<void> {
+    await this.messageRepository.update(
+      { id: In(messageIds) },
+      { isRead: true, readAt: new Date() },
+    );
   }
 }

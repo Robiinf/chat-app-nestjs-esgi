@@ -27,6 +27,8 @@ interface Message {
 
 interface DirectMessage extends Message {
   recipientId: string;
+  isRead?: boolean;
+  readAt?: Date;
 }
 
 interface Conversation {
@@ -55,6 +57,9 @@ interface ChatContextType {
   searchUsers: (username: string) => void;
   searchResults: User[];
   clearSearchResults: () => void;
+  typingUsers: Record<string, boolean>;
+  handleTyping: (recipientId: string) => void;
+  markMessagesAsRead: (messageIds: string[], senderId: string) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -74,6 +79,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
     null
   );
   const [searchResults, setSearchResults] = useState<User[]>([]);
+  const [typingUsers, setTypingUsers] = useState<Record<string, boolean>>({});
+  const [typingTimers, setTypingTimers] = useState<
+    Record<string, NodeJS.Timeout>
+  >({});
   const { user, isAuthenticated } = useAuth();
 
   // Connexion au socket
@@ -163,7 +172,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
       setSearchResults(results);
     });
 
-    // Ajouter cet écouteur dans votre useEffect
     socketInstance.on("error", (error) => {
       console.error("Erreur socket:", error);
       // Optionnel: afficher un message d'erreur dans l'UI
@@ -174,7 +182,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
       // Si besoin, ajouter un traitement spécifique ici
     });
 
-    // Ajouter dans les event listeners du useEffect
     socketInstance.on("newConversation", (conversation) => {
       setConversations((prev) => {
         // Vérifier si cette conversation existe déjà
@@ -184,6 +191,34 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
         } else {
           return [...prev, conversation];
         }
+      });
+    });
+
+    socketInstance.on("userTyping", ({ userId, isTyping }) => {
+      setTypingUsers((prev) => ({
+        ...prev,
+        [userId]: isTyping,
+      }));
+    });
+
+    socketInstance.on("messagesRead", ({ messageIds, readerId }) => {
+      setDirectMessages((prev) => {
+        const newDirectMessages = { ...prev };
+
+        // Pour chaque conversation
+        Object.keys(newDirectMessages).forEach((userId) => {
+          if (userId === readerId) {
+            // Marquer les messages comme lus
+            newDirectMessages[userId] = newDirectMessages[userId].map((msg) => {
+              if (messageIds.includes(msg.id)) {
+                return { ...msg, isRead: true, readAt: new Date() };
+              }
+              return msg;
+            });
+          }
+        });
+
+        return newDirectMessages;
       });
     });
 
@@ -198,11 +233,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
       socketInstance.off("conversations");
       socketInstance.off("searchResults");
       socketInstance.off("newConversation");
+      socketInstance.off("userTyping");
+      socketInstance.off("messagesRead");
       socketInstance.disconnect();
     };
   }, [isAuthenticated, user]);
 
-  // Ajouter cet effet pour surveiller l'état d'authentification
   useEffect(() => {
     if (!isAuthenticated && socket) {
       console.log(
@@ -233,17 +269,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
     (userId: string) => {
       console.log(`Ouverture de la conversation avec l'utilisateur: ${userId}`);
 
-      // Définir d'abord la conversation active
       setActiveConversation(userId);
 
       if (socket && isConnected) {
-        // Toujours émettre startConversation pour s'assurer que le backend renvoie
-        // l'événement newConversation
-        console.log("Émission de startConversation");
         socket.emit("startConversation", { recipientId: userId });
-
-        // Demander les messages directs
-        console.log("Demande des messages directs");
         socket.emit("getDirectMessages", { userId });
       }
     },
@@ -274,6 +303,46 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
     setSearchResults([]);
   }, []);
 
+  const sendTypingStatus = useCallback(
+    (recipientId: string, isTyping: boolean) => {
+      if (socket && isConnected) {
+        socket.emit("typing", { recipientId, isTyping });
+      }
+    },
+    [socket, isConnected]
+  );
+
+  const handleTyping = useCallback(
+    (recipientId: string) => {
+      if (socket && isConnected) {
+        if (typingTimers[recipientId]) {
+          clearTimeout(typingTimers[recipientId]);
+        }
+
+        sendTypingStatus(recipientId, true);
+
+        const timer = setTimeout(() => {
+          sendTypingStatus(recipientId, false);
+        }, 2000);
+
+        setTypingTimers((prev) => ({
+          ...prev,
+          [recipientId]: timer,
+        }));
+      }
+    },
+    [socket, isConnected, sendTypingStatus, typingTimers]
+  );
+
+  const markMessagesAsRead = useCallback(
+    (messageIds: string[], senderId: string) => {
+      if (socket && isConnected) {
+        socket.emit("messageRead", { messageIds, senderId });
+      }
+    },
+    [socket, isConnected]
+  );
+
   const value = {
     messages,
     onlineUsers,
@@ -287,6 +356,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
     searchUsers,
     searchResults,
     clearSearchResults,
+    typingUsers,
+    handleTyping,
+    markMessagesAsRead,
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

@@ -22,6 +22,9 @@ export default function DirectMessages() {
     searchUsers,
     searchResults,
     clearSearchResults,
+    typingUsers,
+    handleTyping,
+    markMessagesAsRead,
   } = useChat();
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -50,6 +53,19 @@ export default function DirectMessages() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeConversation, directMessages]);
+
+  // Marquer les messages non lus comme lus lorsque l'utilisateur ouvre une conversation
+  useEffect(() => {
+    if (activeConversation && user && directMessages[activeConversation]) {
+      const unreadMessages = directMessages[activeConversation]
+        .filter((msg) => !msg.isRead && msg.user.id !== user.id)
+        .map((msg) => msg.id);
+
+      if (unreadMessages.length > 0) {
+        markMessagesAsRead(unreadMessages, activeConversation);
+      }
+    }
+  }, [activeConversation, directMessages, user, markMessagesAsRead]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,6 +100,15 @@ export default function DirectMessages() {
   const handleLogout = async () => {
     await logout();
     router.push("/login");
+  };
+
+  const handleMessageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const message = e.target.value;
+    setNewMessage(message);
+
+    if (activeConversation && message.length > 0) {
+      handleTyping(activeConversation);
+    }
   };
 
   const activeChat = activeConversation
@@ -124,26 +149,39 @@ export default function DirectMessages() {
         lastDate = messageDate;
       }
 
-      // Ajouter le message
+      // Ajouter le message avec l'indicateur de lecture
       result.push(
         <div
           key={message.id}
-          className={`flex ${
-            user && message.user.id === user.id
-              ? "justify-end"
-              : "justify-start"
+          className={`flex flex-col ${
+            user && message.user.id === user.id ? "items-end" : "items-start"
           }`}
         >
           <div
             className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
               user && message.user.id === user.id
                 ? "bg-indigo-500 text-white"
-                : "bg-white dark:bg-gray-700 dark:text-white"
+                : "bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
             }`}
           >
             <div>{message.text}</div>
-            <div className="text-xs opacity-70 text-right mt-1">
-              {formatDate(message.createdAt)}
+            <div className="text-xs opacity-70 text-right mt-1 flex items-center justify-end">
+              <span>{formatDate(message.createdAt)}</span>
+              {message.user.id === user?.id && (
+                <span className="ml-1">
+                  {message.isRead ? (
+                    <span
+                      title={`Lu ${
+                        message.readAt ? formatDate(message.readAt) : ""
+                      }`}
+                    >
+                      ✓✓
+                    </span>
+                  ) : (
+                    <span>✓</span>
+                  )}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -305,6 +343,13 @@ export default function DirectMessages() {
                 )}
                 {activeChat.username}
               </h2>
+
+              {/* Indicateur "en train d'écrire" */}
+              {activeConversation && typingUsers[activeConversation] && (
+                <span className="ml-2 text-sm text-gray-500 italic">
+                  En train d'écrire...
+                </span>
+              )}
             </div>
 
             {/* Messages */}
@@ -319,7 +364,7 @@ export default function DirectMessages() {
                 <input
                   type="text"
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  onChange={handleMessageInputChange}
                   placeholder="Écrivez votre message..."
                   className="flex-1 rounded-l-md p-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:border-indigo-500"
                 />

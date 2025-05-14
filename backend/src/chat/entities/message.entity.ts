@@ -19,6 +19,12 @@ export class Message {
   @Column({ default: 'global' })
   type: string; // 'global', 'private'
 
+  @Column({ default: false })
+  isRead: boolean;
+
+  @Column({ nullable: true })
+  readAt: Date;
+
   @ManyToOne(() => User, (user) => user.messages, { onDelete: 'CASCADE' })
   user: User;
 
