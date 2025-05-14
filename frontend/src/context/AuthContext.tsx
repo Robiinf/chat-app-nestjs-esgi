@@ -1,6 +1,12 @@
 "use client";
 
-import React, { createContext, useState, useContext, useEffect } from "react";
+import React, {
+  createContext,
+  useState,
+  useContext,
+  useEffect,
+  useCallback,
+} from "react";
 import { useRouter } from "next/navigation";
 import { AuthService } from "@/services/api";
 import { User, LoginCredentials, RegisterCredentials } from "@/types/auth";
@@ -27,7 +33,9 @@ const AuthContext = createContext<AuthContextType>({
   error: null,
 });
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,11 +91,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const logout = () => {
-    AuthService.logout();
-    setUser(null);
-    router.push("/login");
-  };
+  const logout = useCallback(async () => {
+    try {
+      AuthService.logout();
+      setUser(null);
+    } catch (error) {
+      console.error("Erreur lors de la déconnexion", error);
+    }
+  }, []);
 
   const value = {
     user,
@@ -101,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
+};
 
 export function useAuth() {
   const context = useContext(AuthContext);

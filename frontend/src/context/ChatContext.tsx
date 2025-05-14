@@ -202,6 +202,24 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, [isAuthenticated, user]);
 
+  // Ajouter cet effet pour surveiller l'état d'authentification
+  useEffect(() => {
+    if (!isAuthenticated && socket) {
+      console.log(
+        "Déconnexion du socket suite à la déconnexion de l'utilisateur"
+      );
+      socket.disconnect();
+      setSocket(null);
+      setIsConnected(false);
+      setMessages([]);
+      setDirectMessages({});
+      setConversations([]);
+      setOnlineUsers([]);
+      setActiveConversation(null);
+      setSearchResults([]);
+    }
+  }, [isAuthenticated, socket]);
+
   const sendMessage = useCallback(
     (text: string) => {
       if (socket && isConnected) {

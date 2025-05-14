@@ -9,7 +9,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 export default function DirectMessages() {
-  const { user, isLoading, isAuthenticated } = useAuth();
+  const { user, isLoading, isAuthenticated, logout } = useAuth();
   const {
     conversations,
     directMessages,
@@ -82,6 +82,11 @@ export default function DirectMessages() {
     setIsSearching(false);
     setSearchQuery("");
     clearSearchResults();
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    router.push("/login");
   };
 
   const activeChat = activeConversation
@@ -210,7 +215,7 @@ export default function DirectMessages() {
         </div>
 
         <div className="mt-auto p-4 border-t dark:border-gray-700">
-          <div className="flex items-center">
+          <div className="flex items-center justify-between">
             <div className="flex flex-col">
               <span className="font-medium dark:text-white">
                 {user.username}
@@ -222,6 +227,12 @@ export default function DirectMessages() {
                 Mon profil
               </Link>
             </div>
+            <button
+              onClick={handleLogout}
+              className="text-sm text-red-500 hover:text-red-600"
+            >
+              Déconnexion
+            </button>
           </div>
         </div>
       </div>

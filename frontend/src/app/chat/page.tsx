@@ -7,11 +7,17 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function Chat() {
-  const { user, isLoading, isAuthenticated } = useAuth();
+  const { user, isLoading, isAuthenticated, logout } = useAuth();
   const { messages, sendMessage, onlineUsers, isConnected } = useChat();
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  // Ajouter cette fonction pour gérer la déconnexion
+  const handleLogout = async () => {
+    await logout();
+    router.push("/login");
+  };
 
   // Rediriger si non authentifié
   useEffect(() => {
@@ -97,7 +103,7 @@ export default function Chat() {
         </div>
 
         <div className="mt-auto p-4 border-t dark:border-gray-700">
-          <div className="flex items-center">
+          <div className="flex items-center justify-between">
             <div className="flex flex-col">
               <span className="font-medium dark:text-white">
                 {user.username}
@@ -109,6 +115,12 @@ export default function Chat() {
                 Mon profil
               </Link>
             </div>
+            <button
+              onClick={handleLogout}
+              className="text-sm text-red-500 hover:text-red-600"
+            >
+              Déconnexion
+            </button>
           </div>
         </div>
       </div>
