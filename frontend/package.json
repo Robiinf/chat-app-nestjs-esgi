@@ -9,7 +9,6 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.75.7",
     "axios": "^1.9.0",
     "js-cookie": "^3.0.5",
     "lucide-react": "^0.509.0",
