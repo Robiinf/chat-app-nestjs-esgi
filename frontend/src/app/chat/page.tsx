@@ -1,43 +1,31 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
-import { useAuth } from "@/context/AuthContext";
-import { useChat } from "@/context/ChatContext";
+import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { formatTime, formatMessageDate, isSameDay } from "@/utils/dateUtils";
+import { useAuth } from "@/context/AuthContext";
+import { useSocket, useGlobalChat } from "@/context/ChatContext";
+import MessageList from "@/components/chat/MessageList";
+import MessageInput from "@/components/chat/MessageInput";
+import OnlineUsersList from "@/components/chat/OnlineUsersList";
+import UserProfileBar from "@/components/chat/UserProfileBar";
 
 export default function Chat() {
   const { user, isLoading, isAuthenticated, logout } = useAuth();
-  const { messages, sendMessage, onlineUsers, isConnected } = useChat();
-  const [newMessage, setNewMessage] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { isConnected } = useSocket();
+  const { messages, onlineUsers, sendMessage } = useGlobalChat();
   const router = useRouter();
 
-  // Ajouter cette fonction pour gérer la déconnexion
-  const handleLogout = async () => {
-    await logout();
-    router.push("/login");
-  };
-
-  // Rediriger si non authentifié
+  // Redirect if not authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.push("/login");
     }
   }, [isLoading, isAuthenticated, router]);
 
-  // Scroll automatique vers le bas quand de nouveaux messages arrivent
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newMessage.trim() && isConnected) {
-      sendMessage(newMessage.trim());
-      setNewMessage("");
-    }
+  const handleLogout = async () => {
+    await logout();
+    router.push("/login");
   };
 
   if (isLoading) {
@@ -51,75 +39,6 @@ export default function Chat() {
   if (!user) {
     return null;
   }
-
-  const formatDate = (dateStr: string | Date) => {
-    return formatTime(dateStr);
-  };
-
-  const renderMessagesWithDateSeparators = () => {
-    if (messages.length === 0) {
-      return (
-        <div className="flex items-center justify-center h-full">
-          <p className="text-gray-500 dark:text-gray-400">
-            Aucun message. Soyez le premier à écrire!
-          </p>
-        </div>
-      );
-    }
-
-    let result = [];
-    let lastDate = null;
-
-    for (let i = 0; i < messages.length; i++) {
-      const message = messages[i];
-      const messageDate = new Date(message.createdAt);
-
-      // Vérifier si nous avons besoin d'ajouter un séparateur de date
-      if (!lastDate || !isSameDay(lastDate, messageDate)) {
-        result.push(
-          <div key={`date-${i}`} className="flex justify-center my-4">
-            <div className="bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full text-sm text-gray-600 dark:text-gray-300">
-              {formatMessageDate(messageDate)}
-            </div>
-          </div>
-        );
-        lastDate = messageDate;
-      }
-
-      // Ajouter le message
-      result.push(
-        <div
-          key={message.id}
-          className={`flex ${
-            message.user.id === user.id ? "justify-end" : "justify-start"
-          }`}
-        >
-          <div
-            className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-              message.user.id === user.id
-                ? "bg-indigo-500 text-white"
-                : "bg-white dark:bg-gray-700 dark:text-white"
-            }`}
-          >
-            {message.user.id !== user.id && (
-              <div
-                className="font-bold mb-1"
-                style={{ color: message.user.messageColor }}
-              >
-                {message.user.username}
-              </div>
-            )}
-            <div>{message.text}</div>
-            <div className="text-xs opacity-70 text-right mt-1">
-              {formatDate(message.createdAt)}
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    return result;
-  };
 
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
@@ -135,89 +54,16 @@ export default function Chat() {
           </Link>
         </div>
 
-        <div className="p-4 border-b dark:border-gray-700">
-          <h3 className="font-semibold text-sm text-gray-500 dark:text-gray-400 mb-3">
-            UTILISATEURS EN LIGNE ({onlineUsers.length})
-          </h3>
-          <ul>
-            {onlineUsers.map((onlineUser) => (
-              <li
-                key={onlineUser.id}
-                className="flex items-center justify-between mb-2"
-              >
-                <div className="flex items-center">
-                  <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
-                  <span className="text-gray-800 dark:text-gray-200">
-                    {onlineUser.username}
-                  </span>
-                </div>
-                {onlineUser.id !== user.id && (
-                  <Link
-                    href={`/messages?userId=${onlineUser.id}`}
-                    className="text-xs text-indigo-500 hover:underline"
-                  >
-                    Message
-                  </Link>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
+        <OnlineUsersList onlineUsers={onlineUsers} currentUserId={user.id} />
 
-        <div className="mt-auto p-4 border-t dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col">
-              <span className="font-medium dark:text-white">
-                {user.username}
-              </span>
-              <Link
-                href="/profile"
-                className="text-xs text-indigo-600 hover:text-indigo-500"
-              >
-                Mon profil
-              </Link>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="text-sm text-red-500 hover:text-red-600"
-            >
-              Déconnexion
-            </button>
-          </div>
-        </div>
+        <UserProfileBar user={user} onLogout={handleLogout} />
       </div>
 
       {/* Chat Area */}
       <div className="flex-1 flex flex-col">
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {renderMessagesWithDateSeparators()}
-          <div ref={messagesEndRef} />
-        </div>
-        {/* Input */}
-        <div className="p-4 border-t dark:border-gray-700">
-          <form onSubmit={handleSubmit} className="flex">
-            <input
-              type="text"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Écrivez votre message..."
-              className="flex-1 rounded-l-md p-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:border-indigo-500"
-            />
-            <button
-              type="submit"
-              disabled={!isConnected || !newMessage.trim()}
-              className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 rounded-r-md focus:outline-none disabled:opacity-50"
-            >
-              Envoyer
-            </button>
-          </form>
-          {!isConnected && (
-            <p className="text-red-500 text-sm mt-1">
-              Déconnecté du serveur. Reconnexion en cours...
-            </p>
-          )}
-        </div>
+        <MessageList messages={messages} currentUserId={user.id} />
+
+        <MessageInput onSendMessage={sendMessage} isConnected={isConnected} />
       </div>
     </div>
   );

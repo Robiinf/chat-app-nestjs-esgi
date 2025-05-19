@@ -71,10 +71,10 @@ export default function Profile() {
       </p>
       <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
         <div className="flex items-start">
-          <div className="font-medium mr-2">{user.username}:</div>
-          <div style={{ color: selectedColor }}>
-            This is how your messages will appear in the chat.
+          <div className="font-medium mr-2" style={{ color: selectedColor }}>
+            {user.username}:
           </div>
+          <div>This is how your messages will appear in the chat.</div>
         </div>
       </div>
     </div>

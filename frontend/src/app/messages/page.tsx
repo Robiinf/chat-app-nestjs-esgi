@@ -1,40 +1,38 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
-import { useState as useStateReact } from "react";
-import { Search } from "lucide-react"; // Si vous utilisez lucide-react, sinon utilisez une autre icône
-import { useAuth } from "@/context/AuthContext";
-import { useChat } from "@/context/ChatContext";
+import React, { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { formatTime, formatMessageDate, isSameDay } from "@/utils/dateUtils";
+import { useAuth } from "@/context/AuthContext";
+import { useSocket, useDirectMessages } from "@/context/ChatContext";
+import MessageList from "@/components/chat/MessageList";
+import MessageInput from "@/components/chat/MessageInput";
+import ConversationList from "@/components/chat/ConversationList";
+import UserSearch from "@/components/chat/UserSearch";
+import UserProfileBar from "@/components/chat/UserProfileBar";
 
 export default function DirectMessages() {
   const { user, isLoading, isAuthenticated, logout } = useAuth();
+  const { isConnected } = useSocket();
   const {
     conversations,
     directMessages,
     sendDirectMessage,
     openDirectChat,
     activeConversation,
-    onlineUsers,
-    isConnected,
     searchUsers,
     searchResults,
     clearSearchResults,
     typingUsers,
     handleTyping,
     markMessagesAsRead,
-  } = useChat();
-  const [newMessage, setNewMessage] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  } = useDirectMessages();
   const router = useRouter();
-
   const searchParams = useSearchParams();
 
-  const [searchQuery, setSearchQuery] = useStateReact("");
-  const [isSearching, setIsSearching] = useStateReact(false);
+  const [isSearching, setIsSearching] = useState(false);
 
+  // Open conversation from URL query parameter
   useEffect(() => {
     const userId = searchParams.get("userId");
     if (userId && isConnected) {
@@ -42,19 +40,14 @@ export default function DirectMessages() {
     }
   }, [searchParams, isConnected, openDirectChat]);
 
-  // Rediriger si non authentifié
+  // Redirect if not authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.push("/login");
     }
   }, [isLoading, isAuthenticated, router]);
 
-  // Scroll automatique vers le bas quand de nouveaux messages arrivent
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [activeConversation, directMessages]);
-
-  // Marquer les messages non lus comme lus lorsque l'utilisateur ouvre une conversation
+  // Mark messages as read when opening a conversation
   useEffect(() => {
     if (activeConversation && user && directMessages[activeConversation]) {
       const unreadMessages = directMessages[activeConversation]
@@ -67,46 +60,19 @@ export default function DirectMessages() {
     }
   }, [activeConversation, directMessages, user, markMessagesAsRead]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newMessage.trim() && isConnected && activeConversation) {
-      sendDirectMessage(newMessage.trim(), activeConversation);
-      setNewMessage("");
-    }
-  };
-
-  const formatDate = (dateStr: string | Date) => {
-    return formatTime(dateStr);
-  };
-
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-    if (query.length >= 2) {
-      searchUsers(query);
-    } else {
-      clearSearchResults();
-    }
-  };
-
-  const startNewConversation = (userId: string) => {
-    console.log("Démarrage d'une conversation avec l'utilisateur:", userId);
-    openDirectChat(userId);
-    setIsSearching(false);
-    setSearchQuery("");
-    clearSearchResults();
-  };
-
   const handleLogout = async () => {
     await logout();
     router.push("/login");
   };
 
-  const handleMessageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const message = e.target.value;
-    setNewMessage(message);
+  const handleSendMessage = (text: string) => {
+    if (activeConversation) {
+      sendDirectMessage(text, activeConversation);
+    }
+  };
 
-    if (activeConversation && message.length > 0) {
+  const handleUserTyping = () => {
+    if (activeConversation) {
       handleTyping(activeConversation);
     }
   };
@@ -118,78 +84,6 @@ export default function DirectMessages() {
   const currentMessages = activeConversation
     ? directMessages[activeConversation] || []
     : [];
-
-  const renderMessagesWithDateSeparators = () => {
-    if (currentMessages.length === 0) {
-      return (
-        <div className="flex items-center justify-center h-full">
-          <p className="text-gray-500 dark:text-gray-400">
-            Aucun message. Commencez la conversation!
-          </p>
-        </div>
-      );
-    }
-
-    let result = [];
-    let lastDate = null;
-
-    for (let i = 0; i < currentMessages.length; i++) {
-      const message = currentMessages[i];
-      const messageDate = new Date(message.createdAt);
-
-      // Vérifier si nous avons besoin d'ajouter un séparateur de date
-      if (!lastDate || !isSameDay(lastDate, messageDate)) {
-        result.push(
-          <div key={`date-${i}`} className="flex justify-center my-4">
-            <div className="bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full text-sm text-gray-600 dark:text-gray-300">
-              {formatMessageDate(messageDate)}
-            </div>
-          </div>
-        );
-        lastDate = messageDate;
-      }
-
-      // Ajouter le message avec l'indicateur de lecture
-      result.push(
-        <div
-          key={message.id}
-          className={`flex flex-col ${
-            user && message.user.id === user.id ? "items-end" : "items-start"
-          }`}
-        >
-          <div
-            className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-              user && message.user.id === user.id
-                ? "bg-indigo-500 text-white"
-                : "bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
-            }`}
-          >
-            <div>{message.text}</div>
-            <div className="text-xs opacity-70 text-right mt-1 flex items-center justify-end">
-              <span>{formatDate(message.createdAt)}</span>
-              {message.user.id === user?.id && (
-                <span className="ml-1">
-                  {message.isRead ? (
-                    <span
-                      title={`Lu ${
-                        message.readAt ? formatDate(message.readAt) : ""
-                      }`}
-                    >
-                      ✓✓
-                    </span>
-                  ) : (
-                    <span>✓</span>
-                  )}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    return result;
-  };
 
   if (isLoading) {
     return (
@@ -217,123 +111,26 @@ export default function DirectMessages() {
           </Link>
         </div>
 
-        {/* Ajouter cette section de recherche */}
-        <div className="p-3 border-b dark:border-gray-700">
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setIsSearching(!isSearching)}
-              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
-            >
-              <Search size={18} className="text-gray-500" />
-            </button>
-            {isSearching && (
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={handleSearch}
-                placeholder="Rechercher un utilisateur..."
-                className="flex-1 p-1 text-sm outline-none border-b border-gray-200 dark:border-gray-600 bg-transparent dark:text-white"
-                autoFocus
-              />
-            )}
-          </div>
+        <UserSearch
+          onSearch={searchUsers}
+          onClearSearch={clearSearchResults}
+          onSelectUser={openDirectChat}
+          results={searchResults}
+          isSearching={isSearching}
+          setIsSearching={setIsSearching}
+        />
 
-          {/* Résultats de recherche */}
-          {isSearching && searchResults.length > 0 && (
-            <div className="mt-2 border rounded-md border-gray-200 dark:border-gray-700">
-              {searchResults.map((user) => (
-                <div
-                  key={user.id}
-                  className="p-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer flex items-center"
-                  onClick={() => startNewConversation(user.id)}
-                >
-                  <div className="flex items-center">
-                    {user.isOnline && (
-                      <span className="h-2 w-2 rounded-full bg-green-500 mr-2" />
-                    )}
-                    <span className="dark:text-white">{user.username}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+        <ConversationList
+          conversations={conversations}
+          activeConversationId={activeConversation}
+          onSelectConversation={openDirectChat}
+        />
 
-          {/* Message si aucun résultat */}
-          {isSearching &&
-            searchQuery.length >= 2 &&
-            searchResults.length === 0 && (
-              <p className="text-sm text-gray-500 mt-2 text-center">
-                Aucun utilisateur trouvé
-              </p>
-            )}
-        </div>
-
-        <div className="overflow-y-auto">
-          {conversations.length === 0 ? (
-            <div className="p-4 text-center text-gray-500">
-              Aucune conversation
-            </div>
-          ) : (
-            conversations.map((conversation) => (
-              <div
-                key={conversation.user.id}
-                className={`p-4 border-b dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ${
-                  activeConversation === conversation.user.id
-                    ? "bg-gray-100 dark:bg-gray-700"
-                    : ""
-                }`}
-                onClick={() => openDirectChat(conversation.user.id)}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <div className="font-medium dark:text-white flex items-center">
-                    {conversation.user.isOnline && (
-                      <span className="h-2 w-2 rounded-full bg-green-500 mr-2" />
-                    )}
-                    {conversation.user.username}
-                  </div>
-                  {conversation.latestMessage && (
-                    <span className="text-xs text-gray-500">
-                      {formatDate(conversation.latestMessage.createdAt)}
-                    </span>
-                  )}
-                </div>
-                {conversation.latestMessage && (
-                  <p className="text-sm text-gray-600 dark:text-gray-300 truncate">
-                    {conversation.latestMessage.isFromUser ? "Vous: " : ""}
-                    {conversation.latestMessage.text}
-                  </p>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-
-        <div className="mt-auto p-4 border-t dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col">
-              <span className="font-medium dark:text-white">
-                {user.username}
-              </span>
-              <Link
-                href="/profile"
-                className="text-xs text-indigo-600 hover:text-indigo-500"
-              >
-                Mon profil
-              </Link>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="text-sm text-red-500 hover:text-red-600"
-            >
-              Déconnexion
-            </button>
-          </div>
-        </div>
+        <UserProfileBar user={user} onLogout={handleLogout} />
       </div>
 
       {/* Chat Area */}
       <div className="flex-1 flex flex-col">
-        {/* Header */}
         {activeChat ? (
           <>
             <div className="p-4 border-b dark:border-gray-700 flex items-center">
@@ -344,7 +141,7 @@ export default function DirectMessages() {
                 {activeChat.username}
               </h2>
 
-              {/* Indicateur "en train d'écrire" */}
+              {/* Typing indicator */}
               {activeConversation && typingUsers[activeConversation] && (
                 <span className="ml-2 text-sm text-gray-500 italic">
                   En train d'écrire...
@@ -352,36 +149,17 @@ export default function DirectMessages() {
               )}
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {renderMessagesWithDateSeparators()}
-              <div ref={messagesEndRef} />
-            </div>
+            <MessageList
+              messages={currentMessages}
+              currentUserId={user.id}
+              showReadStatus={true}
+            />
 
-            {/* Input */}
-            <div className="p-4 border-t dark:border-gray-700">
-              <form onSubmit={handleSubmit} className="flex">
-                <input
-                  type="text"
-                  value={newMessage}
-                  onChange={handleMessageInputChange}
-                  placeholder="Écrivez votre message..."
-                  className="flex-1 rounded-l-md p-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:border-indigo-500"
-                />
-                <button
-                  type="submit"
-                  disabled={!isConnected || !newMessage.trim()}
-                  className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 rounded-r-md focus:outline-none disabled:opacity-50"
-                >
-                  Envoyer
-                </button>
-              </form>
-              {!isConnected && (
-                <p className="text-red-500 text-sm mt-1">
-                  Déconnecté du serveur. Reconnexion en cours...
-                </p>
-              )}
-            </div>
+            <MessageInput
+              onSendMessage={handleSendMessage}
+              onTyping={handleUserTyping}
+              isConnected={isConnected}
+            />
           </>
         ) : (
           <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">

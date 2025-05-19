@@ -217,17 +217,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: { recipientId: string },
   ) {
-    console.log(`Démarrage d'une conversation avec ${payload.recipientId}`);
-
     if (!client.data.user) {
-      console.log('Utilisateur non authentifié');
       return;
     }
 
     // Vérifier si l'utilisateur existe
     const recipient = await this.usersService.findById(payload.recipientId);
     if (!recipient) {
-      console.log('Destinataire non trouvé');
       client.emit('error', { message: 'Utilisateur non trouvé' });
       return;
     }
