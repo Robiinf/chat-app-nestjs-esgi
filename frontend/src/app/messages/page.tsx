@@ -32,7 +32,6 @@ export default function DirectMessages() {
 
   const [isSearching, setIsSearching] = useState(false);
 
-  // Open conversation from URL query parameter
   useEffect(() => {
     const userId = searchParams.get("userId");
     if (userId && isConnected) {
@@ -40,14 +39,12 @@ export default function DirectMessages() {
     }
   }, [searchParams, isConnected, openDirectChat]);
 
-  // Redirect if not authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.push("/login");
     }
   }, [isLoading, isAuthenticated, router]);
 
-  // Mark messages as read when opening a conversation
   useEffect(() => {
     if (activeConversation && user && directMessages[activeConversation]) {
       const unreadMessages = directMessages[activeConversation]

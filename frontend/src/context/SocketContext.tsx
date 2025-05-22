@@ -19,7 +19,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isConnected, setIsConnected] = useState(false);
   const { isAuthenticated } = useAuth();
 
-  // Socket connection setup and cleanup
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -48,7 +47,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, [isAuthenticated]);
 
-  // Cleanup on logout
   useEffect(() => {
     if (!isAuthenticated && socket) {
       socket.disconnect();

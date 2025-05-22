@@ -17,7 +17,6 @@ const MessageList: React.FC<MessageListProps> = ({
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -32,7 +31,6 @@ const MessageList: React.FC<MessageListProps> = ({
     );
   }
 
-  // Group messages by date
   let result = [];
   let lastDate = null;
 
@@ -40,13 +38,11 @@ const MessageList: React.FC<MessageListProps> = ({
     const message = messages[i];
     const messageDate = new Date(message.createdAt);
 
-    // Add date separator if needed
     if (!lastDate || !isSameDay(lastDate, messageDate)) {
       result.push(<DateSeparator key={`date-${i}`} date={messageDate} />);
       lastDate = messageDate;
     }
 
-    // Add message
     result.push(
       <MessageBubble
         key={message.id}

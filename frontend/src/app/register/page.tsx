@@ -1,21 +1,20 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import React, { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function Register() {
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const { register, error, isLoading, isAuthenticated } = useAuth();
   const router = useRouter();
 
-  // Redirect if already authenticated
   React.useEffect(() => {
     if (isAuthenticated) {
-      router.push('/chat');
+      router.push("/chat");
     }
   }, [isAuthenticated, router]);
 
@@ -36,9 +35,7 @@ export default function Register() {
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
-            <div className="bg-red-500 text-white p-3 rounded">
-              {error}
-            </div>
+            <div className="bg-red-500 text-white p-3 rounded">{error}</div>
           )}
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
@@ -95,14 +92,17 @@ export default function Register() {
               disabled={isLoading}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
-              {isLoading ? 'Creating account...' : 'Register'}
+              {isLoading ? "Creating account..." : "Register"}
             </button>
           </div>
-          
+
           <div className="text-sm text-center">
             <p className="font-medium text-gray-600 dark:text-gray-400">
-              Already have an account?{' '}
-              <Link href="/login" className="text-indigo-600 hover:text-indigo-500">
+              Already have an account?{" "}
+              <Link
+                href="/login"
+                className="text-indigo-600 hover:text-indigo-500"
+              >
                 Sign in
               </Link>
             </p>

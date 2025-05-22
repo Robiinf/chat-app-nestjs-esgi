@@ -102,7 +102,6 @@ export class ChatService {
   }
 
   async getUserConversations(userId: string): Promise<any[]> {
-    // Trouver tous les messages directs impliquant cet utilisateur
     const sentMessages = await this.messageRepository.find({
       where: { type: 'direct', user: { id: userId } },
       relations: ['recipient'],
@@ -113,7 +112,6 @@ export class ChatService {
       relations: ['user'],
     });
 
-    // Extraire les IDs uniques des utilisateurs avec qui l'utilisateur a conversé
     const userIds = new Set<string>();
 
     sentMessages.forEach((msg) => {
@@ -123,13 +121,11 @@ export class ChatService {
     });
     receivedMessages.forEach((msg) => userIds.add(msg.user.id));
 
-    // Récupérer les infos de ces utilisateurs
     const conversations = await Promise.all(
       Array.from(userIds).map(async (contactId) => {
         const contact = await this.usersService.findById(contactId);
-        // Ajouter une vérification
         if (!contact) {
-          return null; // Ou un objet par défaut si vous préférez
+          return null;
         }
 
         const latestMessage = await this.getLatestDirectMessage(
@@ -154,7 +150,6 @@ export class ChatService {
       }),
     );
 
-    // Et filtrer les conversations nulles
     return conversations.filter(Boolean) as any[];
   }
 

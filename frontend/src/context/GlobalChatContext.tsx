@@ -34,14 +34,11 @@ export const GlobalChatProvider: React.FC<{ children: React.ReactNode }> = ({
   const [messages, setMessages] = useState<Message[]>([]);
   const [onlineUsers, setOnlineUsers] = useState<User[]>([]);
 
-  // Set up socket event listeners for global chat
   useEffect(() => {
     if (!socket) return;
 
-    // Request initial data
     socket.emit("getMessageHistory");
 
-    // Message listeners
     const handleGlobalMessage = (message: Message) => {
       setMessages((prevMessages) => [...prevMessages, message]);
     };
@@ -50,7 +47,6 @@ export const GlobalChatProvider: React.FC<{ children: React.ReactNode }> = ({
       setMessages(history);
     };
 
-    // User status listeners
     const handleOnlineUsers = (users: User[]) => {
       setOnlineUsers(users);
     };
@@ -71,13 +67,11 @@ export const GlobalChatProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     };
 
-    // Register event listeners
     socket.on("globalMessage", handleGlobalMessage);
     socket.on("messageHistory", handleMessageHistory);
     socket.on("onlineUsers", handleOnlineUsers);
     socket.on("userStatus", handleUserStatus);
 
-    // Clean up
     return () => {
       socket.off("globalMessage", handleGlobalMessage);
       socket.off("messageHistory", handleMessageHistory);

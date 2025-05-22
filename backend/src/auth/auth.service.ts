@@ -47,7 +47,6 @@ export class AuthService {
   }
 
   async register(username: string, email: string, password: string) {
-    // Vérifier si l'utilisateur existe déjà
     const existingUser = await this.usersService.findOne(username);
     if (existingUser) {
       throw new ConflictException('Username already exists');
@@ -58,17 +57,14 @@ export class AuthService {
       throw new ConflictException('Email already in use');
     }
 
-    // Valider le mot de passe
     if (password.length < 6) {
       throw new BadRequestException(
         'Password must be at least 6 characters long',
       );
     }
 
-    // Créer le nouvel utilisateur
     const newUser = await this.usersService.create(username, email, password);
 
-    // Retourner un token JWT pour une connexion automatique
     return this.login(newUser);
   }
 

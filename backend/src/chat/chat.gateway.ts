@@ -13,7 +13,7 @@ import { UsersService } from '../users/users.service';
 
 @WebSocketGateway({
   cors: {
-    origin: '*', // En production, limitez à votre domaine frontend
+    origin: '*',
   },
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -41,13 +41,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       client.data.user = user;
 
-      // Mettre à jour le statut de l'utilisateur à "en ligne"
       await this.usersService.updateOnlineStatus(user.id, true);
 
-      // Informer tous les clients qu'un utilisateur est connecté
       this.server.emit('userStatus', { userId: user.id, status: 'online' });
 
-      // Envoyer la liste des utilisateurs en ligne au client qui vient de se connecter
       const onlineUsers = await this.usersService.getOnlineUsers();
       client.emit('onlineUsers', onlineUsers);
     } catch (error) {
@@ -60,10 +57,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (client.data.user) {
       const userId = client.data.user.id;
 
-      // Mettre à jour le statut de l'utilisateur à "hors ligne"
       await this.usersService.updateOnlineStatus(userId, false);
 
-      // Informer tous les clients qu'un utilisateur est déconnecté
       this.server.emit('userStatus', { userId, status: 'offline' });
     }
   }
@@ -77,14 +72,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     if (!user) return;
 
-    // Sauvegarder le message dans la base de données
     const message = await this.chatService.saveMessage({
       text: payload.text,
       userId: user.id,
       type: 'global',
     });
 
-    // Émettre le message à tous les clients connectés
     this.server.emit('globalMessage', {
       id: message.id,
       text: message.text,
@@ -112,14 +105,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     if (!sender) return;
 
-    // Vérifier si le destinataire existe
     const recipient = await this.usersService.findById(payload.recipientId);
     if (!recipient) {
       client.emit('error', { message: 'Destinataire non trouvé' });
       return;
     }
 
-    // Sauvegarder le message dans la base de données
     const message = await this.chatService.saveMessage({
       text: payload.text,
       userId: sender.id,
@@ -139,13 +130,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       recipientId: payload.recipientId,
     };
 
-    // Émettre le message uniquement à l'expéditeur et au destinataire
     const recipientSocket = this.findSocketByUserId(payload.recipientId);
     if (recipientSocket) {
       recipientSocket.emit('directMessage', messageData);
     }
 
-    // Également envoyer au client expéditeur
     client.emit('directMessage', messageData);
   }
 
@@ -167,7 +156,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
   }
 
-  // Ajouter cette méthode utilitaire pour trouver un socket par ID utilisateur
   private findSocketByUserId(userId: string): Socket | undefined {
     const connectedSockets = this.server.sockets.sockets;
     const sockets = Array.from(connectedSockets.values());
@@ -192,17 +180,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     if (!client.data.user) return;
 
-    // Rechercher les utilisateurs correspondant au username partiel
     const users = await this.usersService.findByPartialUsername(
       payload.username,
     );
 
-    // Ne pas inclure l'utilisateur actuel dans les résultats
     const filteredUsers = users.filter(
       (user) => user.id !== client.data.user.id,
     );
 
-    // Transformer les données pour n'envoyer que ce qui est nécessaire
     const results = filteredUsers.map((user) => ({
       id: user.id,
       username: user.username,
@@ -221,14 +206,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    // Vérifier si l'utilisateur existe
     const recipient = await this.usersService.findById(payload.recipientId);
     if (!recipient) {
       client.emit('error', { message: 'Utilisateur non trouvé' });
       return;
     }
 
-    // Émettre l'événement newConversation avec les bonnes données
     client.emit('newConversation', {
       user: {
         id: recipient.id,
@@ -238,7 +221,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       latestMessage: null,
     });
 
-    // Informer l'utilisateur que la conversation est prête
     client.emit('conversationStarted', {
       userId: payload.recipientId,
       username: recipient.username,
@@ -272,10 +254,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     if (!client.data.user) return;
 
-    // Optionnellement mettre à jour les messages comme lus dans la base de données
     await this.chatService.markMessagesAsRead(payload.messageIds);
 
-    // Notifier l'expéditeur original que ses messages ont été lus
     const senderSocket = this.findSocketByUserId(payload.senderId);
     if (senderSocket) {
       senderSocket.emit('messagesRead', {

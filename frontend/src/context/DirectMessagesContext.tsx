@@ -33,7 +33,7 @@ export const DirectMessagesProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
   const { socket, isConnected } = useSocket();
-  const { user } = useAuth(); // Récupérer l'utilisateur actuel directement
+  const { user } = useAuth();
   const [directMessages, setDirectMessages] = useState<
     Record<string, DirectMessage[]>
   >({});
@@ -47,16 +47,12 @@ export const DirectMessagesProvider: React.FC<{
     Record<string, NodeJS.Timeout>
   >({});
 
-  // Set up socket event listeners for direct messages
   useEffect(() => {
     if (!socket || !user) return;
 
-    // Request initial data
     socket.emit("getConversations");
 
-    // Direct message handlers
     const handleDirectMessage = (message: DirectMessage) => {
-      // Identifie correctement la conversation avec laquelle le message est associé
       const conversationUserId =
         message.user.id === user.id ? message.recipientId : message.user.id;
 
@@ -68,7 +64,6 @@ export const DirectMessagesProvider: React.FC<{
         };
       });
 
-      // Update conversations list
       socket.emit("getConversations");
     };
 
@@ -85,7 +80,6 @@ export const DirectMessagesProvider: React.FC<{
       }));
     };
 
-    // Conversation handlers
     const handleConversations = (newConversations: Conversation[]) => {
       setConversations(newConversations);
     };
@@ -98,12 +92,10 @@ export const DirectMessagesProvider: React.FC<{
       });
     };
 
-    // User search handlers
     const handleSearchResults = (results: User[]) => {
       setSearchResults(results);
     };
 
-    // Typing indicators
     const handleUserTyping = ({
       userId,
       isTyping,
@@ -117,7 +109,6 @@ export const DirectMessagesProvider: React.FC<{
       }));
     };
 
-    // Read receipts
     const handleMessagesRead = ({
       messageIds,
       readerId,
@@ -143,7 +134,6 @@ export const DirectMessagesProvider: React.FC<{
       });
     };
 
-    // Register event listeners
     socket.on("directMessage", handleDirectMessage);
     socket.on("directMessageHistory", handleDirectMessageHistory);
     socket.on("conversations", handleConversations);
@@ -152,7 +142,6 @@ export const DirectMessagesProvider: React.FC<{
     socket.on("userTyping", handleUserTyping);
     socket.on("messagesRead", handleMessagesRead);
 
-    // Clean up event listeners
     return () => {
       socket.off("directMessage", handleDirectMessage);
       socket.off("directMessageHistory", handleDirectMessageHistory);
@@ -162,9 +151,8 @@ export const DirectMessagesProvider: React.FC<{
       socket.off("userTyping", handleUserTyping);
       socket.off("messagesRead", handleMessagesRead);
     };
-  }, [socket, user]); // Ajout de user comme dépendance
+  }, [socket, user]);
 
-  // Reset state when socket disconnects
   useEffect(() => {
     if (!isConnected) {
       setDirectMessages({});

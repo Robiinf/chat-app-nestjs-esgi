@@ -15,7 +15,6 @@ export class SeederService {
   ) {}
 
   async seed() {
-    // Vérifier si des données existent déjà
     const userCount = await this.usersRepository.count();
 
     if (userCount > 0) {
@@ -25,13 +24,10 @@ export class SeederService {
 
     console.log('Début du seeding de la base de données...');
 
-    // Créer des utilisateurs
     const users = await this.seedUsers();
 
-    // Créer des messages globaux
     await this.seedGlobalMessages(users);
 
-    // Créer des conversations directes
     await this.seedDirectMessages(users);
 
     console.log('Seeding terminé avec succès!');
@@ -42,7 +38,6 @@ export class SeederService {
 
     const users: User[] = [];
 
-    // Créer un tableau d'utilisateurs à insérer
     const usersData = [
       {
         username: 'alice',
@@ -117,7 +112,6 @@ export class SeederService {
       { text: 'Moi !', userId: 4 },
     ];
 
-    // Création de messages avec des timestamps différents
     let date = new Date();
     date.setHours(date.getHours() - messages.length);
 
@@ -131,7 +125,6 @@ export class SeederService {
 
       await this.messagesRepository.save(message);
 
-      // Ajouter quelques minutes pour le prochain message
       date = new Date(date.getTime() + 10 * 60000); // +10 minutes
     }
 
@@ -204,16 +197,15 @@ export class SeederService {
           isRead: true,
         };
 
-        // Ajouter readAt uniquement si le message est lu (messages reçus)
         if (!isFromSender) {
-          messageData.readAt = new Date(date.getTime() + 5 * 60000); // +5 minutes
+          messageData.readAt = new Date(date.getTime() + 5 * 60000);
         }
 
         const message = this.messagesRepository.create(messageData);
         await this.messagesRepository.save(message);
 
         isFromSender = !isFromSender;
-        date = new Date(date.getTime() + 5 * 60000); // +5 minutes
+        date = new Date(date.getTime() + 5 * 60000);
       }
     }
 

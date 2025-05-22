@@ -17,7 +17,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
   );
 };
 
-// Re-export hooks for convenience
 export { useSocket } from "./SocketContext";
 export { useGlobalChat } from "./GlobalChatContext";
 export { useDirectMessages } from "./DirectMessagesContext";

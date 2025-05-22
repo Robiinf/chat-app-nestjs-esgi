@@ -8,7 +8,7 @@ import { HexColorPicker } from "react-colorful";
 
 export default function Profile() {
   const { user, setUser, isLoading } = useAuth();
-  const [selectedColor, setSelectedColor] = useState("#1e88e5"); // Default blue
+  const [selectedColor, setSelectedColor] = useState("#1e88e5");
   const [updating, setUpdating] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
   const router = useRouter();
@@ -19,9 +19,7 @@ export default function Profile() {
     }
   }, [user]);
 
-  // Safe color setter that ensures we never set undefined/null
   const handleColorChange = (newColor: string): void => {
-    // Ensure we always have a valid string value
     if (newColor && typeof newColor === "string") {
       setSelectedColor(newColor);
     }
@@ -63,7 +61,6 @@ export default function Profile() {
     }
   };
 
-  // Example message preview with the selected color
   const MessagePreview = () => (
     <div className="p-4 mb-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
@@ -128,7 +125,7 @@ export default function Profile() {
                 />
                 <input
                   type="text"
-                  value={selectedColor || "#1e88e5"} // Ensure we always have a value
+                  value={selectedColor || "#1e88e5"}
                   onChange={(e) => handleColorChange(e.target.value)}
                   className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   pattern="^#([A-Fa-f0-9]{6})$"

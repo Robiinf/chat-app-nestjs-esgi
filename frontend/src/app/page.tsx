@@ -18,7 +18,6 @@ export default function Home() {
     }
   }, [isAuthenticated, isLoading, router]);
 
-  // Showing a loading state while checking authentication
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="text-2xl font-bold">Loading...</div>
