@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { UserService } from "@/services/api";
 import { useRouter } from "next/navigation";
 import { HexColorPicker } from "react-colorful";
+import MessageBubble from "@/components/chat/MessageBubble";
 
 export default function Profile() {
   const { user, setUser, isLoading } = useAuth();
@@ -61,21 +62,32 @@ export default function Profile() {
     }
   };
 
-  const MessagePreview = () => (
-    <div className="p-4 mb-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
-        Message Preview:
-      </p>
-      <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
-        <div className="flex items-start">
-          <div className="font-medium mr-2" style={{ color: selectedColor }}>
-            {user.username}:
-          </div>
-          <div>This is how your messages will appear in the chat.</div>
+  const MessagePreview = () => {
+    const previewMessage = {
+      id: "preview",
+      text: "This is how your messages will appear in the chat for people.",
+      createdAt: new Date(),
+      user: {
+        ...user,
+        messageColor: selectedColor,
+      },
+    };
+
+    return (
+      <div className="p-4 mb-4 bg-gray-100 dark:bg-gray-900 rounded-lg">
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
+          Message Preview:
+        </p>
+        <div className="space-y-4">
+          <MessageBubble
+            message={previewMessage}
+            isOwnMessage={false}
+            showReadStatus={false}
+          />
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center py-12 px-4">
@@ -108,7 +120,7 @@ export default function Profile() {
         <form onSubmit={handleSubmit}>
           <div className="mb-6">
             <h3 className="text-lg font-medium mb-4 text-gray-900 dark:text-white">
-              Message Color
+              Profile Color
             </h3>
 
             <div className="flex flex-col items-center mb-4">
