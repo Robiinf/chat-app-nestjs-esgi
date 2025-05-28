@@ -19,9 +19,22 @@ const ConversationList: React.FC<ConversationListProps> = ({
     );
   }
 
+  // Trier les conversations par date du dernier message (du plus récent au plus ancien)
+  const sortedConversations = [...conversations].sort((a, b) => {
+    // Si une conversation n'a pas de message récent, la placer en dernier
+    if (!a.latestMessage) return 1;
+    if (!b.latestMessage) return -1;
+
+    // Comparer les dates des derniers messages
+    return (
+      new Date(b.latestMessage.createdAt).getTime() -
+      new Date(a.latestMessage.createdAt).getTime()
+    );
+  });
+
   return (
     <div className="overflow-y-auto">
-      {conversations.map((conversation) => (
+      {sortedConversations.map((conversation) => (
         <ConversationItem
           key={conversation.user.id}
           conversation={conversation}
