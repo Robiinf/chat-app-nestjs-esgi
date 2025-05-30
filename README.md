@@ -138,7 +138,7 @@ npm run dev
 - User search functionality
 - User presence indication (online/offline status)
 - Message history
-- Handling typing indicators and read messages
+- Handling typing indicators and read messages (in private messages)
 - (Adminer running on port 8080) You can access it at `http://localhost:8080` after starting the Docker container with the credentials in the `.env` file.
 
 ### How to Use
